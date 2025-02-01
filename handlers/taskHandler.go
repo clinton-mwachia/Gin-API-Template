@@ -6,12 +6,14 @@ import (
 	"gin-api/utils"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 func CreateTask(c *gin.Context) {
@@ -110,30 +112,52 @@ func DeleteTask(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Task deleted successfully"})
 }
 
-/*
 // GetPaginatedTasks retrieves tasks with pagination
 func GetPaginatedTasks(c *gin.Context) {
+	ctx := context.Background()
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
-	skip := (page - 1) * limit
+	skipInt64 := int64((page - 1) * limit)
 
-	findOptions := options.Find()
-	findOptions.SetSkip(int64(skip))
-	findOptions.SetLimit(int64(limit))
+	// Convert to int64
+	limitInt64 := int64(limit)
 
-	cursor, err := utils.DB.Database(os.Getenv("DB_NAME")).Collection("tasks").Find(context.TODO(), bson.M{}, findOptions)
+	// Create options with correct int64 types
+	findOptions := options.Find().SetSkip(skipInt64).SetLimit(limitInt64)
+
+	cursor, err := utils.DB.Database(os.Getenv("DB_NAME")).Collection("tasks").Find(
+		ctx,
+		bson.M{},
+		findOptions,
+	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch tasks"})
 		return
 	}
+	defer cursor.Close(ctx)
 
 	var tasks []models.Task
-	if err := cursor.All(context.Background(), &tasks); err != nil {
+	if err := cursor.All(ctx, &tasks); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decode tasks"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"tasks": tasks, "page": page, "limit": limit})
-}
+	// Get total count for pagination
+	total, err := utils.DB.Database(os.Getenv("DB_NAME")).Collection("tasks").CountDocuments(ctx, bson.M{})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count total documents"})
+		return
+	}
 
-*/
+	totalPages := (int(total) + limit - 1) / limit
+
+	c.JSON(http.StatusOK, gin.H{
+		"tasks": tasks,
+		"pagination": gin.H{
+			"current_page": page,
+			"total_pages":  totalPages,
+			"total_items":  total,
+			"limit":        limit,
+		},
+	})
+}

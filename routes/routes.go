@@ -23,6 +23,6 @@ func SetupRoutes(router *gin.Engine) {
 		api.GET("/task/:id", handlers.GetTaskByID)
 		api.PUT("/task/:id", handlers.UpdateTask)
 		api.DELETE("/task/:id", handlers.DeleteTask)
-		//api.GET("/tasks/paginated", handlers.GetPaginatedTasks)
+		api.GET("/tasks/paginated", handlers.GetPaginatedTasks) //http://localhost:8080/v1/api/tasks/paginated?page=1&limit=5
 	}
 }
