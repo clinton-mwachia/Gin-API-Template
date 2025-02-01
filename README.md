@@ -84,20 +84,23 @@ The server will start at **`http://localhost:8080`**
 
 ### Tasks
 
-| Method | Endpoint     | Description         |
-| ------ | ------------ | ------------------- |
-| POST   | `/tasks`     | Create a new task   |
-| GET    | `/tasks`     | Get paginated tasks |
-| GET    | `/tasks/:id` | Get task by ID      |
-| PUT    | `/tasks/:id` | Update a task       |
-| DELETE | `/tasks/:id` | Delete a task       |
+| Method | Endpoint           | Description         |
+| ------ | ------------------ | ------------------- |
+| POST   | `/task`            | Create a new task   |
+| GET    | `/users`           | Get all tasks       |
+| GET    | `/tasks/paginated` | Get paginated tasks |
+| GET    | `/task/:id`        | Get task by ID      |
+| PUT    | `/task/:id`        | Update a task       |
+| DELETE | `/task/:id`        | Delete a task       |
 
 ### Users
 
-| Method | Endpoint     | Description    |
-| ------ | ------------ | -------------- |
-| GET    | `/users/:id` | Get user by ID |
-| DELETE | `/users/:id` | Delete a user  |
+| Method | Endpoint    | Description    |
+| ------ | ----------- | -------------- |
+| GET    | `/user/:id` | Get user by ID |
+| DELETE | `/user/:id` | Delete a user  |
+| UPDATE | `/user/:id` | Update a user  |
+| GET    | `/users`    | Get all user   |
 
 ## 📌 Contribution
 
