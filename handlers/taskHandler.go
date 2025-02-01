@@ -5,17 +5,14 @@ import (
 	"gin-api/models"
 	"gin-api/utils"
 	"net/http"
-	"strconv"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
-
-var taskCollection = utils.GetCollection("tasks")
 
 func CreateTask(c *gin.Context) {
 	var task models.Task
@@ -28,7 +25,7 @@ func CreateTask(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err := taskCollection.InsertOne(ctx, task)
+	_, err := utils.DB.Database(os.Getenv("DB_NAME")).Collection("tasks").InsertOne(ctx, task)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create task"})
 		return
@@ -41,7 +38,7 @@ func GetTasks(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	cursor, err := taskCollection.Find(ctx, bson.M{})
+	cursor, err := utils.DB.Database(os.Getenv("DB_NAME")).Collection("tasks").Find(ctx, bson.M{})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch tasks"})
 		return
@@ -63,7 +60,7 @@ func GetTaskByID(c *gin.Context) {
 	defer cancel()
 
 	var task models.Task
-	err := taskCollection.FindOne(ctx, bson.M{"id": taskID}).Decode(&task)
+	err := utils.DB.Database(os.Getenv("DB_NAME")).Collection("tasks").FindOne(ctx, bson.M{"id": taskID}).Decode(&task)
 	if err == mongo.ErrNoDocuments {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 		return
@@ -90,7 +87,7 @@ func UpdateTask(c *gin.Context) {
 	filter := bson.M{"id": taskID}
 	update := bson.M{"$set": updatedTask}
 
-	_, err := taskCollection.UpdateOne(ctx, filter, update)
+	_, err := utils.DB.Database(os.Getenv("DB_NAME")).Collection("tasks").UpdateOne(ctx, filter, update)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update task"})
 		return
@@ -104,7 +101,7 @@ func DeleteTask(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err := taskCollection.DeleteOne(ctx, bson.M{"id": taskID})
+	_, err := utils.DB.Database(os.Getenv("DB_NAME")).Collection("tasks").DeleteOne(ctx, bson.M{"id": taskID})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete task"})
 		return
@@ -113,6 +110,7 @@ func DeleteTask(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Task deleted successfully"})
 }
 
+/*
 // GetPaginatedTasks retrieves tasks with pagination
 func GetPaginatedTasks(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -123,7 +121,7 @@ func GetPaginatedTasks(c *gin.Context) {
 	findOptions.SetSkip(int64(skip))
 	findOptions.SetLimit(int64(limit))
 
-	cursor, err := taskCollection.Find(context.TODO(), bson.M{}, findOptions)
+	cursor, err := utils.DB.Database(os.Getenv("DB_NAME")).Collection("tasks").Find(context.TODO(), bson.M{}, findOptions)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch tasks"})
 		return
@@ -137,3 +135,5 @@ func GetPaginatedTasks(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"tasks": tasks, "page": page, "limit": limit})
 }
+
+*/

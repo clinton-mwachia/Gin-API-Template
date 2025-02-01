@@ -5,6 +5,7 @@ import (
 	"gin-api/models"
 	"gin-api/utils"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -13,8 +14,6 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"golang.org/x/crypto/bcrypt"
 )
-
-var userCollection = utils.GetCollection("users")
 
 func Register(c *gin.Context) {
 	var user models.User
@@ -34,7 +33,7 @@ func Register(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err = userCollection.InsertOne(ctx, user)
+	_, err = utils.DB.Database(os.Getenv("DB_NAME")).Collection("users").InsertOne(ctx, user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 		return
@@ -54,7 +53,7 @@ func Login(c *gin.Context) {
 	defer cancel()
 
 	var user models.User
-	err := userCollection.FindOne(ctx, bson.M{"email": loginData.Email}).Decode(&user)
+	err := utils.DB.Database(os.Getenv("DB_NAME")).Collection("users").FindOne(ctx, bson.M{"email": loginData.Email}).Decode(&user)
 	if err == mongo.ErrNoDocuments {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
@@ -90,7 +89,7 @@ func GetUserByID(c *gin.Context) {
 	}
 
 	var user models.User
-	err = userCollection.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
+	err = utils.DB.Database(os.Getenv("DB_NAME")).Collection("users").FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
@@ -104,7 +103,7 @@ func GetUsers(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	cursor, err := userCollection.Find(ctx, bson.M{})
+	cursor, err := utils.DB.Database(os.Getenv("DB_NAME")).Collection("users").Find(ctx, bson.M{})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
 		return
@@ -129,7 +128,7 @@ func DeleteUser(c *gin.Context) {
 		return
 	}
 
-	_, err = userCollection.DeleteOne(context.Background(), bson.M{"_id": userID})
+	_, err = utils.DB.Database(os.Getenv("DB_NAME")).Collection("users").DeleteOne(context.Background(), bson.M{"_id": userID})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
 		return
@@ -153,7 +152,7 @@ func UpdateUser(c *gin.Context) {
 	filter := bson.M{"id": userID}
 	update := bson.M{"$set": updatedUser}
 
-	_, err := userCollection.UpdateOne(ctx, filter, update)
+	_, err := utils.DB.Database(os.Getenv("DB_NAME")).Collection("users").UpdateOne(ctx, filter, update)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
 		return

@@ -1,36 +1,29 @@
 package utils
 
 import (
-	"context"
+	"fmt"
 	"log"
 	"os"
-	"time"
 
+	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-var DB *mongo.Database
+var DB *mongo.Client
+
+func LoadEnv() error {
+	if err := godotenv.Load(); err != nil {
+		return fmt.Errorf("error loading .env file: %w", err)
+	}
+	return nil
+}
 
 func ConnectDB() {
 	clientOptions := options.Client().ApplyURI(os.Getenv("MONGO_URI"))
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
 	client, err := mongo.Connect(clientOptions)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Error connecting to the DB: ", err)
 	}
-
-	err = client.Ping(ctx, nil)
-	if err != nil {
-		log.Fatal("Could not connect to MongoDB")
-	}
-
-	DB = client.Database(os.Getenv("DB_NAME"))
-	log.Println("Connected to MongoDB")
-}
-
-func GetCollection(name string) *mongo.Collection {
-	return DB.Collection(name)
+	DB = client
 }
