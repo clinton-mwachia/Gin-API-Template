@@ -6,11 +6,12 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 var jwtSecret = []byte(os.Getenv("JWT_SECRET"))
 
-func GenerateToken(userID string) (string, error) {
+func GenerateToken(userID primitive.ObjectID) (string, error) {
 	claims := jwt.MapClaims{
 		"user_id": userID,
 		"exp":     time.Now().Add(time.Hour * 72).Unix(),

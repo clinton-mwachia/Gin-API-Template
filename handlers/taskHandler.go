@@ -12,7 +12,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
@@ -23,11 +22,9 @@ func CreateTask(c *gin.Context) {
 		return
 	}
 
-	task.ID = primitive.NewObjectID().Hex()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	task.ID = primitive.NewObjectID()
 
-	_, err := utils.DB.Database(os.Getenv("DB_NAME")).Collection("tasks").InsertOne(ctx, task)
+	_, err := utils.DB.Database(os.Getenv("DB_NAME")).Collection("tasks").InsertOne(context.Background(), task)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create task"})
 		return
@@ -56,18 +53,19 @@ func GetTasks(c *gin.Context) {
 	c.JSON(http.StatusOK, tasks)
 }
 
+// GetTaskByID fetches a user by their ID
 func GetTaskByID(c *gin.Context) {
-	taskID := c.Param("id")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	id := c.Param("id")
+	taskID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
+		return
+	}
 
 	var task models.Task
-	err := utils.DB.Database(os.Getenv("DB_NAME")).Collection("tasks").FindOne(ctx, bson.M{"id": taskID}).Decode(&task)
-	if err == mongo.ErrNoDocuments {
+	err = utils.DB.Database(os.Getenv("DB_NAME")).Collection("tasks").FindOne(context.Background(), bson.M{"id": taskID}).Decode(&task)
+	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
-		return
-	} else if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving task"})
 		return
 	}
 
@@ -75,21 +73,25 @@ func GetTaskByID(c *gin.Context) {
 }
 
 func UpdateTask(c *gin.Context) {
-	taskID := c.Param("id")
-	var updatedTask models.Task
+	userID := c.Param("id")
+
+	objID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	var updatedTask bson.M
 
 	if err := c.ShouldBindJSON(&updatedTask); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	filter := bson.M{"id": taskID}
+	filter := bson.M{"id": objID}
 	update := bson.M{"$set": updatedTask}
 
-	_, err := utils.DB.Database(os.Getenv("DB_NAME")).Collection("tasks").UpdateOne(ctx, filter, update)
+	_, err = utils.DB.Database(os.Getenv("DB_NAME")).Collection("tasks").UpdateOne(context.Background(), filter, update)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update task"})
 		return
@@ -99,11 +101,15 @@ func UpdateTask(c *gin.Context) {
 }
 
 func DeleteTask(c *gin.Context) {
-	taskID := c.Param("id")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	id := c.Param("id")
 
-	_, err := utils.DB.Database(os.Getenv("DB_NAME")).Collection("tasks").DeleteOne(ctx, bson.M{"id": taskID})
+	taskID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
+		return
+	}
+
+	_, err = utils.DB.Database(os.Getenv("DB_NAME")).Collection("tasks").DeleteOne(context.Background(), bson.M{"id": taskID})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete task"})
 		return

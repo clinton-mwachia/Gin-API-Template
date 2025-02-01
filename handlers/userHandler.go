@@ -29,11 +29,9 @@ func Register(c *gin.Context) {
 		return
 	}
 	user.Password = string(hashedPassword)
+	user.ID = primitive.NewObjectID()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	_, err = utils.DB.Database(os.Getenv("DB_NAME")).Collection("users").InsertOne(ctx, user)
+	_, err = utils.DB.Database(os.Getenv("DB_NAME")).Collection("users").InsertOne(context.Background(), user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 		return
@@ -89,7 +87,7 @@ func GetUserByID(c *gin.Context) {
 	}
 
 	var user models.User
-	err = utils.DB.Database(os.Getenv("DB_NAME")).Collection("users").FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
+	err = utils.DB.Database(os.Getenv("DB_NAME")).Collection("users").FindOne(context.Background(), bson.M{"id": userID}).Decode(&user)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
@@ -128,7 +126,7 @@ func DeleteUser(c *gin.Context) {
 		return
 	}
 
-	_, err = utils.DB.Database(os.Getenv("DB_NAME")).Collection("users").DeleteOne(context.Background(), bson.M{"_id": userID})
+	_, err = utils.DB.Database(os.Getenv("DB_NAME")).Collection("users").DeleteOne(context.Background(), bson.M{"id": userID})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
 		return
@@ -139,20 +137,23 @@ func DeleteUser(c *gin.Context) {
 
 func UpdateUser(c *gin.Context) {
 	userID := c.Param("id")
-	var updatedUser models.User
+	objID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	var updatedUser bson.M
 
 	if err := c.ShouldBindJSON(&updatedUser); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	filter := bson.M{"id": userID}
+	filter := bson.M{"id": objID}
 	update := bson.M{"$set": updatedUser}
 
-	_, err := utils.DB.Database(os.Getenv("DB_NAME")).Collection("users").UpdateOne(ctx, filter, update)
+	_, err = utils.DB.Database(os.Getenv("DB_NAME")).Collection("users").UpdateOne(context.Background(), filter, update)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
 		return
