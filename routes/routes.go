@@ -2,6 +2,7 @@ package routes
 
 import (
 	"gin-api/handlers"
+	"gin-api/helpers"
 
 	"github.com/gin-gonic/gin"
 )
@@ -13,9 +14,13 @@ func SetupRoutes(router *gin.Engine) {
 		api.POST("/login", handlers.Login)
 		api.POST("/register", handlers.Register)
 		api.GET("/user/:id", handlers.GetUserByID)
-		api.GET("/users", handlers.GetUsers)
 		api.PUT("/user/:id", handlers.UpdateUser)
 		api.DELETE("/user/:id", handlers.DeleteUser)
+
+		// protected routes
+		secured := api.Group("")
+		secured.Use(helpers.AuthMiddleware())
+		secured.GET("/users", handlers.GetUsers)
 
 		// tasks routes
 		api.POST("/task", handlers.CreateTask)

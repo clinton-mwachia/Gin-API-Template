@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"gin-api/helpers"
 	"gin-api/models"
 	"gin-api/utils"
 	"net/http"
@@ -22,9 +23,16 @@ func CreateTask(c *gin.Context) {
 		return
 	}
 
+	// validate status
+	err := helpers.ValidateTaskStatus(task.Status)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+
 	task.ID = primitive.NewObjectID()
 
-	_, err := utils.DB.Database(os.Getenv("DB_NAME")).Collection("tasks").InsertOne(context.Background(), task)
+	_, err = utils.DB.Database(os.Getenv("DB_NAME")).Collection("tasks").InsertOne(context.Background(), task)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create task"})
 		return
