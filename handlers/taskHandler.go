@@ -28,17 +28,18 @@ func CreateTask(c *gin.Context) {
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	} else {
+		task.ID = primitive.NewObjectID()
+
+		_, err = utils.DB.Database(os.Getenv("DB_NAME")).Collection("tasks").InsertOne(context.Background(), task)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create task"})
+			return
+		}
+
+		c.JSON(http.StatusCreated, gin.H{"message": "Task created successfully"})
 	}
 
-	task.ID = primitive.NewObjectID()
-
-	_, err = utils.DB.Database(os.Getenv("DB_NAME")).Collection("tasks").InsertOne(context.Background(), task)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create task"})
-		return
-	}
-
-	c.JSON(http.StatusCreated, gin.H{"message": "Task created successfully"})
 }
 
 func GetTasks(c *gin.Context) {
